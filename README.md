@@ -2,6 +2,48 @@
 
 Terraform module for managing AWS KMS keys with support for multi-region replication, automatic key rotation, custom policies, aliases, grants, and CloudWatch alarms.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph KMS["AWS KMS"]
+        direction TB
+        PK[Primary Key] --> A1[Alias: app-key]
+        PK --> A2[Alias: db-key]
+        PK --> ROT[Auto Rotation]
+        PK --> POL[Key Policy]
+    end
+
+    subgraph MultiRegion["Multi-Region Replication"]
+        PK -->|Replicate| RK1[Replica Key us-west-2]
+        PK -->|Replicate| RK2[Replica Key eu-west-1]
+    end
+
+    subgraph Services["Encrypted AWS Services"]
+        PK --> S3[S3 Buckets]
+        PK --> RDS[RDS / Aurora]
+        PK --> EBS[EBS Volumes]
+        PK --> SM[Secrets Manager]
+        PK --> CW[CloudWatch Logs]
+    end
+
+    subgraph Monitoring["CloudWatch Monitoring"]
+        PK --> AL[Usage Alarms]
+        AL --> SNS[SNS Notifications]
+    end
+
+    subgraph Grants["Temporary Access"]
+        PK --> G1[Grant: Service A]
+        PK --> G2[Grant: Service B]
+    end
+
+    style KMS fill:#FF9900,color:#fff
+    style MultiRegion fill:#1A73E8,color:#fff
+    style Services fill:#3F8624,color:#fff
+    style Monitoring fill:#DD344C,color:#fff
+    style Grants fill:#8C4FFF,color:#fff
+```
+
 ## Features
 
 - **KMS Key Creation** -- Create symmetric or asymmetric KMS keys with configurable key specs and usage types.
