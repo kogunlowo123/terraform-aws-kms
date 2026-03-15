@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>terraform-aws-kms | Architecture</title>
+<style>
+:root{--ink:#0b0c0b;--accent:#c8420a;--surface:#141514;--border:#2a2b2a;--text:#d4d4d4;--muted:#8a8a8a;--card:#1a1b1a;--green:#2ea043;--blue:#4493f8;--yellow:#d29922;--red:#f85149}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ink);color:var(--text);font-family:'SF Mono','Cascadia Code','Fira Code',monospace;font-size:14px;line-height:1.7}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.container{max-width:1200px;margin:0 auto;padding:2rem}
+header{border-bottom:2px solid var(--accent);padding-bottom:1.5rem;margin-bottom:2.5rem}
+header h1{font-size:1.8rem;color:#fff;letter-spacing:-0.5px}
+header .subtitle{color:var(--muted);margin-top:0.3rem;font-size:0.95rem}
+h2{font-size:1.3rem;color:var(--accent);margin:2.5rem 0 1rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)}
+h3{font-size:1rem;color:#fff;margin:1.5rem 0 0.5rem}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:0.75rem;font-weight:600;margin-right:0.4rem}
+.badge-green{background:rgba(46,160,67,0.15);color:var(--green);border:1px solid rgba(46,160,67,0.3)}
+.badge-blue{background:rgba(68,147,248,0.15);color:var(--blue);border:1px solid rgba(68,147,248,0.3)}
+.badge-yellow{background:rgba(210,153,34,0.15);color:var(--yellow);border:1px solid rgba(210,153,34,0.3)}
+.badge-red{background:rgba(248,81,73,0.15);color:var(--red);border:1px solid rgba(248,81,73,0.3)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1.2rem}
+.card .label{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.card .value{font-size:1.4rem;color:#fff;margin-top:0.3rem;font-weight:700}
+.card .detail{font-size:0.8rem;color:var(--muted);margin-top:0.2rem}
+.arch-diagram{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2rem;margin:1rem 0;overflow-x:auto}
+.flow-row{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:center;margin:0.5rem 0}
+.flow-box{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:0.6rem 1rem;text-align:center;font-size:0.8rem;min-width:120px}
+.flow-box.primary{border-color:var(--accent);color:var(--accent)}
+.flow-box.green{border-color:var(--green);color:var(--green)}
+.flow-box.blue{border-color:var(--blue);color:var(--blue)}
+.flow-box.yellow{border-color:var(--yellow);color:var(--yellow)}
+.flow-box.red{border-color:var(--red);color:var(--red)}
+.flow-arrow{color:var(--muted);font-size:1.2rem}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.85rem}
+th,td{text-align:left;padding:0.5rem 0.8rem;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:0.7rem;letter-spacing:1px}
+td code{background:var(--surface);padding:1px 5px;border-radius:3px;font-size:0.8rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:0.3rem 0;padding-left:1.5rem;position:relative}
+.checklist li::before{content:"[ ]";position:absolute;left:0;color:var(--muted);font-size:0.8rem}
+.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}
+.info-block{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1.2rem;margin:0.5rem 0}
+.info-block h4{color:var(--accent);margin-bottom:0.5rem;font-size:0.9rem}
+.info-block ul{padding-left:1.2rem;color:var(--muted);font-size:0.85rem}
+.info-block li{margin:0.2rem 0}
+footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);color:var(--muted);font-size:0.75rem;text-align:center}
+.exec-summary{background:var(--surface);border-left:3px solid var(--accent);padding:1.2rem 1.5rem;margin:1rem 0;border-radius:0 6px 6px 0;font-size:0.9rem;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>terraform-aws-kms</h1>
+<div class="subtitle">AWS KMS key management with multi-region replication, automatic rotation, aliases, grants, and CloudWatch alarms</div>
+<div style="margin-top:0.8rem">
+<span class="badge badge-green">Terraform &ge; 1.0</span>
+<span class="badge badge-blue">AWS Provider &ge; 5.0</span>
+<span class="badge badge-yellow">Symmetric + Asymmetric</span>
+<span class="badge badge-red">Auto Rotation</span>
+</div>
+</header>
+
+<h2>Executive Summary</h2>
+<div class="exec-summary">
+This module creates and manages AWS KMS keys supporting symmetric (ENCRYPT_DECRYPT), asymmetric (SIGN_VERIFY), and HMAC (GENERATE_VERIFY_MAC) key types. It includes automatic key rotation with configurable periods (90-2560 days), multi-region primary keys with replica deployment, multiple aliases, KMS grants for temporary programmatic access delegation, custom or default key policies, and CloudWatch metric alarms for key usage monitoring. The module follows the per-service key strategy recommended for compliance frameworks such as SOC 2, PCI-DSS, and HIPAA.
+</div>
+
+<h2>Overview</h2>
+<div class="cards">
+<div class="card"><div class="label">Resources Created</div><div class="value">5</div><div class="detail">KMS Key, Aliases, Replica Key, Grants, CloudWatch Alarm</div></div>
+<div class="card"><div class="label">Input Variables</div><div class="value">13</div><div class="detail">description, key_usage, rotation, multi_region, aliases, grants, etc.</div></div>
+<div class="card"><div class="label">Outputs</div><div class="value">4</div><div class="detail">key_id, key_arn, alias_arns, replica_key_arns</div></div>
+<div class="card"><div class="label">Key Specs</div><div class="value">12</div><div class="detail">SYMMETRIC_DEFAULT, RSA, ECC, HMAC variants</div></div>
+</div>
+
+<h2>Architecture Diagram</h2>
+<div class="arch-diagram">
+<div class="flow-row">
+<div class="flow-box primary">KMS Primary Key<br><small>SYMMETRIC_DEFAULT</small></div>
+</div>
+<div class="flow-row"><span class="flow-arrow">&darr;</span></div>
+<div class="flow-row">
+<div class="flow-box yellow">Alias: app-key</div>
+<div class="flow-box yellow">Alias: db-key</div>
+<div class="flow-box green">Auto Rotation<br><small>365 days</small></div>
+<div class="flow-box blue">Key Policy<br><small>Custom / Default</small></div>
+</div>
+<div class="flow-row"><span class="flow-arrow">&darr;</span></div>
+<div class="flow-row">
+<div class="flow-box blue">Replica Key<br><small>us-west-2</small></div>
+<div class="flow-box blue">Replica Key<br><small>eu-west-1</small></div>
+</div>
+<div class="flow-row"><span class="flow-arrow">&darr;</span></div>
+<div class="flow-row">
+<div class="flow-box green">S3 Buckets</div>
+<div class="flow-box green">RDS / Aurora</div>
+<div class="flow-box green">EBS Volumes</div>
+<div class="flow-box green">Secrets Manager</div>
+<div class="flow-box green">CloudWatch Logs</div>
+</div>
+<div class="flow-row"><span class="flow-arrow">&darr;</span></div>
+<div class="flow-row">
+<div class="flow-box red">Grant: Service A</div>
+<div class="flow-box red">Grant: Service B</div>
+<div class="flow-box blue">CW Alarm<br><small>Usage Threshold</small></div>
+</div>
+</div>
+
+<h2>Component Breakdown</h2>
+<div class="section-grid">
+<div class="info-block">
+<h4>KMS Key</h4>
+<ul>
+<li>Symmetric (AES-256-GCM) or asymmetric (RSA/ECC)</li>
+<li>HMAC key specs (224/256/384/512)</li>
+<li>ENCRYPT_DECRYPT, SIGN_VERIFY, GENERATE_VERIFY_MAC usage</li>
+<li>Configurable deletion window (7-30 days)</li>
+<li>Automatic key rotation (90-2560 day period)</li>
+</ul>
+</div>
+<div class="info-block">
+<h4>Multi-Region</h4>
+<ul>
+<li>Primary key with multi_region=true</li>
+<li>Replica keys in specified regions via aws.replica provider</li>
+<li>Same key material across regions</li>
+<li>Independent key policies per region</li>
+</ul>
+</div>
+<div class="info-block">
+<h4>Aliases &amp; Grants</h4>
+<ul>
+<li>Multiple aliases per key (must start with alias/)</li>
+<li>Grants for temporary access delegation</li>
+<li>Encryption context constraints on grants</li>
+<li>Retiring principal support for grant lifecycle</li>
+</ul>
+</div>
+<div class="info-block">
+<h4>Monitoring</h4>
+<ul>
+<li>CloudWatch metric alarm for key usage</li>
+<li>Threshold: 1000 operations per 5 minutes</li>
+<li>Optional via enable_cloudwatch_alarms</li>
+</ul>
+</div>
+</div>
+
+<h2>Data Flow</h2>
+<div class="info-block">
+<ol style="padding-left:1.2rem;color:var(--muted);font-size:0.85rem">
+<li>AWS services (S3, RDS, EBS, etc.) reference the KMS key ARN or alias for encryption</li>
+<li>KMS generates data encryption keys (DEKs) using the CMK for envelope encryption</li>
+<li>DEK encrypts the data; encrypted DEK is stored alongside</li>
+<li>For decryption, KMS decrypts the DEK using the CMK, then DEK decrypts the data</li>
+<li>Grants allow specific IAM principals to use the key for defined operations</li>
+<li>Multi-region replicas enable cross-region encrypt/decrypt without key transfer</li>
+<li>Key rotation automatically creates new key material while preserving old material for decryption</li>
+</ol>
+</div>
+
+<h2>Security Controls</h2>
+<table>
+<tr><th>Control</th><th>Implementation</th><th>Default</th></tr>
+<tr><td>Key Rotation</td><td>Automatic annual rotation</td><td><code>enable_key_rotation=true</code>, 365 days</td></tr>
+<tr><td>Deletion Protection</td><td>Configurable waiting period</td><td><code>deletion_window_in_days=30</code></td></tr>
+<tr><td>Access Control</td><td>Key policy + IAM + grants</td><td>Account root full access</td></tr>
+<tr><td>Encryption Context</td><td>Grant constraints for context validation</td><td>Optional per grant</td></tr>
+<tr><td>Multi-Region</td><td>Replicated key material</td><td><code>multi_region=false</code></td></tr>
+<tr><td>Monitoring</td><td>CloudWatch alarm on usage spikes</td><td><code>enable_cloudwatch_alarms=true</code></td></tr>
+</table>
+
+<h2>Industry Adaptation</h2>
+<div class="section-grid">
+<div class="info-block">
+<h4>Per-Service Key Strategy</h4>
+<ul>
+<li>alias/prod-s3-data-at-rest -- S3 encryption</li>
+<li>alias/prod-rds-encryption -- RDS instances</li>
+<li>alias/prod-lambda-env-vars -- Lambda env vars</li>
+<li>alias/prod-secrets-manager -- Secrets Manager</li>
+<li>Separate keys reduce blast radius</li>
+</ul>
+</div>
+<div class="info-block">
+<h4>Compliance (SOC 2, PCI-DSS, HIPAA)</h4>
+<ul>
+<li>Customer-managed keys with custom policies</li>
+<li>Independent rotation per workload</li>
+<li>CloudTrail audit per key for granular logging</li>
+<li>Grants for temporary cross-account access</li>
+</ul>
+</div>
+<div class="info-block">
+<h4>Multi-Region / DR</h4>
+<ul>
+<li>Primary + replica for cross-region encryption</li>
+<li>Same key ID enables seamless failover</li>
+<li>No key material transfer required</li>
+</ul>
+</div>
+</div>
+
+<h2>Production Readiness Checklist</h2>
+<ul class="checklist">
+<li>Enable <code>enable_key_rotation = true</code></li>
+<li>Set <code>deletion_window_in_days = 30</code> (maximum)</li>
+<li>Define a custom key policy (avoid default root access in production)</li>
+<li>Use meaningful aliases following naming convention</li>
+<li>Create separate keys per service / workload</li>
+<li>Enable CloudWatch alarms for usage monitoring</li>
+<li>For multi-region: configure replica in DR region</li>
+<li>Scope grants with encryption context constraints</li>
+<li>Tag all keys with Environment, Service, Owner</li>
+</ul>
+
+<h2>Configuration Reference</h2>
+<h3>Key Inputs</h3>
+<table>
+<tr><th>Variable</th><th>Type</th><th>Default</th><th>Description</th></tr>
+<tr><td><code>description</code></td><td>string</td><td><code>KMS key managed by Terraform</code></td><td>Key description</td></tr>
+<tr><td><code>key_usage</code></td><td>string</td><td><code>ENCRYPT_DECRYPT</code></td><td>ENCRYPT_DECRYPT, SIGN_VERIFY, or GENERATE_VERIFY_MAC</td></tr>
+<tr><td><code>customer_master_key_spec</code></td><td>string</td><td><code>SYMMETRIC_DEFAULT</code></td><td>Key spec (12 options)</td></tr>
+<tr><td><code>enable_key_rotation</code></td><td>bool</td><td><code>true</code></td><td>Auto rotation</td></tr>
+<tr><td><code>rotation_period_in_days</code></td><td>number</td><td><code>365</code></td><td>Rotation interval (90-2560)</td></tr>
+<tr><td><code>deletion_window_in_days</code></td><td>number</td><td><code>30</code></td><td>Days before permanent deletion</td></tr>
+<tr><td><code>multi_region</code></td><td>bool</td><td><code>false</code></td><td>Multi-region key</td></tr>
+<tr><td><code>aliases</code></td><td>list(string)</td><td><code>[]</code></td><td>Key aliases (alias/ prefix)</td></tr>
+<tr><td><code>grants</code></td><td>list(object)</td><td><code>[]</code></td><td>KMS grants</td></tr>
+</table>
+
+<h3>Key Outputs</h3>
+<table>
+<tr><th>Output</th><th>Description</th></tr>
+<tr><td><code>key_id</code></td><td>Globally unique key identifier</td></tr>
+<tr><td><code>key_arn</code></td><td>KMS key ARN</td></tr>
+<tr><td><code>alias_arns</code></td><td>Map of alias names to ARNs</td></tr>
+<tr><td><code>replica_key_arns</code></td><td>List of replica key ARNs</td></tr>
+</table>
+
+<h2>Deployment</h2>
+<div class="info-block">
+<pre style="color:var(--text);font-size:0.85rem">
+# Initialize
+terraform init
+
+# Plan
+terraform plan -var-file="kms.tfvars"
+
+# Apply
+terraform apply -var-file="kms.tfvars"
+
+# Verify
+aws kms describe-key --key-id &lt;key_id&gt;
+aws kms list-aliases --key-id &lt;key_id&gt;
+</pre>
+</div>
+
+<h2>Links &amp; References</h2>
+<div class="section-grid">
+<div class="info-block">
+<h4>AWS Documentation</h4>
+<ul>
+<li><a href="https://docs.aws.amazon.com/kms/latest/developerguide/">KMS Developer Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/kms/latest/developerguide/multi-region-keys-overview.html">Multi-Region Keys</a></li>
+<li><a href="https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html">Key Rotation</a></li>
+</ul>
+</div>
+<div class="info-block">
+<h4>Module Resources</h4>
+<ul>
+<li><a href="../examples/basic/">Example: Basic</a></li>
+<li><a href="../examples/advanced/">Example: Advanced</a></li>
+<li><a href="../examples/complete/">Example: Complete</a></li>
+</ul>
+</div>
+</div>
+
+<footer>
+terraform-aws-kms | Architecture Documentation | Generated 2026-03-15 | MIT License
+</footer>
+</div>
+</body>
+</html>
