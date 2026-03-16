@@ -1,6 +1,3 @@
-# ------------------------------------------------------------------------------
-# KMS Key
-# ------------------------------------------------------------------------------
 resource "aws_kms_key" "this" {
   description              = var.description
   key_usage                = var.key_usage
@@ -12,22 +9,16 @@ resource "aws_kms_key" "this" {
   multi_region             = var.multi_region
   policy                   = coalesce(var.key_policy, data.aws_iam_policy_document.default_key_policy.json)
 
-  tags = local.default_tags
+  tags = var.tags
 }
 
-# ------------------------------------------------------------------------------
-# KMS Aliases
-# ------------------------------------------------------------------------------
 resource "aws_kms_alias" "this" {
-  for_each = local.aliases_map
+  for_each = { for alias in var.aliases : alias => alias }
 
   name          = each.value
   target_key_id = aws_kms_key.this.key_id
 }
 
-# ------------------------------------------------------------------------------
-# KMS Replica Key (multi-region)
-# ------------------------------------------------------------------------------
 resource "aws_kms_replica_key" "this" {
   count = var.multi_region && var.replica_region != null ? 1 : 0
 
@@ -39,14 +30,11 @@ resource "aws_kms_replica_key" "this" {
   enabled                 = true
   policy                  = coalesce(var.key_policy, data.aws_iam_policy_document.default_key_policy.json)
 
-  tags = local.default_tags
+  tags = var.tags
 }
 
-# ------------------------------------------------------------------------------
-# KMS Grants
-# ------------------------------------------------------------------------------
 resource "aws_kms_grant" "this" {
-  for_each = local.grants_map
+  for_each = { for idx, grant in var.grants : coalesce(grant.name, "grant-${idx}") => grant }
 
   name              = each.key
   key_id            = aws_kms_key.this.key_id
@@ -64,9 +52,6 @@ resource "aws_kms_grant" "this" {
   }
 }
 
-# ------------------------------------------------------------------------------
-# CloudWatch Alarm – KMS Key Usage
-# ------------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "key_usage" {
   count = var.enable_cloudwatch_alarms ? 1 : 0
 
@@ -85,5 +70,5 @@ resource "aws_cloudwatch_metric_alarm" "key_usage" {
     KeyId = aws_kms_key.this.key_id
   }
 
-  tags = local.default_tags
+  tags = var.tags
 }

@@ -5,7 +5,7 @@ variable "description" {
 }
 
 variable "key_usage" {
-  description = "Specifies the intended use of the key. Valid values: ENCRYPT_DECRYPT, SIGN_VERIFY, GENERATE_VERIFY_MAC."
+  description = "Specifies the intended use of the key (ENCRYPT_DECRYPT, SIGN_VERIFY, GENERATE_VERIFY_MAC)."
   type        = string
   default     = "ENCRYPT_DECRYPT"
 
@@ -16,7 +16,7 @@ variable "key_usage" {
 }
 
 variable "customer_master_key_spec" {
-  description = "Specifies whether the key contains a symmetric key or an asymmetric key pair and the encryption or signing algorithms the key supports."
+  description = "Specifies whether the key is symmetric or asymmetric and the algorithms it supports."
   type        = string
   default     = "SYMMETRIC_DEFAULT"
 
@@ -38,7 +38,7 @@ variable "enable_key_rotation" {
 }
 
 variable "rotation_period_in_days" {
-  description = "The number of days between each automatic rotation. Valid value is between 90 and 2560."
+  description = "The number of days between each automatic rotation (90-2560)."
   type        = number
   default     = 365
 
@@ -49,7 +49,7 @@ variable "rotation_period_in_days" {
 }
 
 variable "deletion_window_in_days" {
-  description = "The number of days before the key is permanently deleted after destruction of the resource. Must be between 7 and 30."
+  description = "Days before the key is permanently deleted after resource destruction (7-30)."
   type        = number
   default     = 30
 
@@ -60,13 +60,13 @@ variable "deletion_window_in_days" {
 }
 
 variable "multi_region" {
-  description = "Whether the KMS key is a multi-Region key. If true, a replica key resource is created."
+  description = "Whether the KMS key is a multi-Region key."
   type        = bool
   default     = false
 }
 
 variable "aliases" {
-  description = "A list of alias names for the KMS key. Each alias must begin with 'alias/'."
+  description = "A list of alias names for the KMS key, each must begin with 'alias/'."
   type        = list(string)
   default     = []
 
@@ -77,7 +77,7 @@ variable "aliases" {
 }
 
 variable "key_policy" {
-  description = "A valid JSON policy document for the KMS key. If not provided, a default policy granting the account full access is used."
+  description = "A valid JSON policy document for the KMS key; defaults to full account access if not provided."
   type        = string
   default     = null
 }
@@ -85,10 +85,10 @@ variable "key_policy" {
 variable "grants" {
   description = "A list of grant objects for the KMS key."
   type = list(object({
-    grantee_principal    = string
-    operations           = list(string)
-    retiring_principal   = optional(string, null)
-    name                 = optional(string, null)
+    grantee_principal     = string
+    operations            = list(string)
+    retiring_principal    = optional(string, null)
+    name                  = optional(string, null)
     grant_creation_tokens = optional(list(string), null)
     constraints = optional(object({
       encryption_context_equals = optional(map(string), null)
@@ -105,7 +105,7 @@ variable "enable_cloudwatch_alarms" {
 }
 
 variable "tags" {
-  description = "A map of tags to assign to the KMS key and related resources."
+  description = "A map of tags to assign to all resources."
   type        = map(string)
   default     = {}
 }
