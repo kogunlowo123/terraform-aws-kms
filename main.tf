@@ -36,10 +36,10 @@ resource "aws_kms_replica_key" "this" {
 resource "aws_kms_grant" "this" {
   for_each = { for idx, grant in var.grants : coalesce(grant.name, "grant-${idx}") => grant }
 
-  name              = each.key
-  key_id            = aws_kms_key.this.key_id
-  grantee_principal = each.value.grantee_principal
-  operations        = each.value.operations
+  name               = each.key
+  key_id             = aws_kms_key.this.key_id
+  grantee_principal  = each.value.grantee_principal
+  operations         = each.value.operations
   retiring_principal = each.value.retiring_principal
 
   dynamic "constraints" {
