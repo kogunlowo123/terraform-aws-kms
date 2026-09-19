@@ -80,11 +80,6 @@ module "kms" {
 module "kms" {
   source = "kogunlowo123/kms/aws"
 
-  providers = {
-    aws         = aws
-    aws.replica = aws.us_west_2
-  }
-
   description    = "Multi-region encryption key"
   multi_region   = true
   replica_region = "us-west-2"
@@ -152,7 +147,7 @@ module "kms_rds" {
 | Name      | Version |
 |-----------|---------|
 | terraform | >= 1.0  |
-| aws       | >= 5.0  |
+| aws       | >= 6.0  |
 
 ## Inputs
 

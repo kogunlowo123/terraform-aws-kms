@@ -125,7 +125,7 @@ This module creates and manages AWS KMS keys supporting symmetric (ENCRYPT_DECRY
 <h4>Multi-Region</h4>
 <ul>
 <li>Primary key with multi_region=true</li>
-<li>Replica keys in specified regions via aws.replica provider</li>
+<li>Replica keys in the region given by replica_region (per-resource region argument, AWS provider &gt;= 6.0)</li>
 <li>Same key material across regions</li>
 <li>Independent key policies per region</li>
 </ul>

@@ -22,8 +22,7 @@ resource "aws_kms_alias" "this" {
 resource "aws_kms_replica_key" "this" {
   count = var.multi_region && var.replica_region != null ? 1 : 0
 
-  provider = aws.replica
-
+  region                  = var.replica_region
   primary_key_arn         = aws_kms_key.this.arn
   description             = "${var.description} (replica)"
   deletion_window_in_days = var.deletion_window_in_days

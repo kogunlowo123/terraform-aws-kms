@@ -2,11 +2,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-provider "aws" {
-  alias  = "replica"
-  region = "us-west-2"
-}
-
 data "aws_caller_identity" "current" {}
 
 # Custom key policy for fine-grained access control
@@ -47,11 +42,6 @@ data "aws_iam_policy_document" "key_policy" {
 
 module "kms" {
   source = "../../"
-
-  providers = {
-    aws         = aws
-    aws.replica = aws.replica
-  }
 
   description              = "Complete multi-region KMS key with all features"
   key_usage                = "ENCRYPT_DECRYPT"
